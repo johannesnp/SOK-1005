@@ -1,0 +1,54 @@
+---
+title: "Assignment 3"
+format: html
+editor: visual
+---
+
+## Assignment 3
+
+Task 1:
+
+```{r}
+rm(list=ls())
+library(tidyverse)
+library(jsonlite)
+library(ggrepel)
+```
+
+```{r}
+json_url <- "https://static01.nyt.com/newsgraphics/2021/12/20/us-coronavirus-deaths-2021/ff0adde21623e111d8ce103fedecf7ffc7906264/scatter.json"
+
+json_df <- fromJSON(json_url) 
+
+json_df <- json_df %>% 
+  mutate(json_df,vac_pop_percent = fully_vaccinated_pct_of_pop*100)
+
+json_df %>% 
+  ggplot(aes(vac_pop_percent,deaths_per_100k))+
+  geom_point()+
+  ggtitle("Covid-19 deaths since universal adult vaccine eligibility compared with vaccination rates")+
+  xlab("Share of population fully vaccinated")+
+  ylab("20 avg. montly deaths per 100,000")+
+  theme_bw()+
+  geom_label_repel(aes(label = name),size=3)
+```
+
+Task 2:
+
+```{r}
+lm(deaths_per_100k~vac_pop_percent, data=json_df)
+```
+
+```{r}
+json_df %>% 
+  ggplot(aes(vac_pop_percent,deaths_per_100k))+
+  geom_point()+
+  ggtitle("Covid-19 deaths since universal adult vaccine eligibility compared with vaccination rates")+
+  xlab("Share of population fully vaccinated")+
+  ylab("20 avg. montly deaths per 100,000")+
+  theme_bw()+
+  theme(plot.title = element_text(size = 11))+
+  geom_smooth(method = lm)
+```
+
+The correlation shows that 31 less death per 1 percent increase in the vaccination in the US.
