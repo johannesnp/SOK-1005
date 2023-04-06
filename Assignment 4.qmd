@@ -1,0 +1,89 @@
+---
+title: "Assignment 4"
+format: html
+editor: visual
+---
+
+## Assignment 4
+
+1\)
+
+```{r}
+library(tidyverse)
+```
+
+```{r}
+df <- read.csv("https://raw.githubusercontent.com/uit-sok-1005-v23/uit-sok-1005-v23.github.io/main/storedata.csv")
+
+
+df$Order_Date <- as.Date(df$Order_Date,format="%Y-%m-%d")
+
+variables = c("Conusmer","Corporate")
+
+df_1 <- df %>% 
+  filter(between(Order_Date, as.Date("2017-10-01"), as.Date("2017-12-31"))) %>% 
+  filter(Region %in% c("Region 1","Region 9")) %>% 
+  filter(Customer_Segment %in% variables)
+
+df_1 <- df_1 %>%
+  group_by(month = lubridate::floor_date(Order_Date, 'month')) %>% 
+  summarize(sum_of_sales = sum(Sales))
+  
+df_1
+```
+
+Task 2
+
+```{r}
+df_2 <- df %>% 
+  filter(Region %in% c("Region 1","Region 13")) %>% 
+  filter(between(Order_Date, as.Date("2015-01-01"), as.Date("2017-12-31")))
+
+df_2 <- df_2 %>%
+  group_by(month = lubridate::floor_date(Order_Date, 'month')) %>% 
+  summarize(sum_of_sales = sum(Sales))
+
+df_2 %>% 
+  ggplot()+
+  geom_line(aes(x=month,y=sum_of_sales))+
+  ggtitle("Total monthly sales between 2015 and 2017")+
+  theme_bw()
+```
+
+3\)
+
+In Figure 1, identify the months where the total Sales in Region 13 is greater than the total Sales in Region 1. This output is Table 2.
+
+```{r}
+Table_2 <- df %>% 
+  mutate(Order_Date = as.Date(Order_Date)) %>% 
+  filter(between(Order_Date, as.Date("2015-01-01"), as.Date("2017-12-31"))) %>%
+  filter(Region %in% c("Region 1","Region 13")) %>%
+  group_by(Region, Order_Date, Customer_Segment) %>% 
+  summarize(total_sales = sum(Sales)) %>% 
+  group_by(month=floor_date(Order_Date, "month"),Region) %>%
+    summarize(sales_month = sum(total_sales)) %>% 
+  pivot_wider(names_from = Region,values_from = sales_month) %>% 
+  filter(`Region 13` > `Region 1`)
+```
+
+4\)
+
+Find the average Profit per Customer_Segment and Product_Category in 2017, for all regions except Region 3, 5 and 8. What segment produced the highest average profit? This output is Table 3.
+
+```{r}
+tab_3 <- df %>% 
+  mutate(Order_Date = as.Date(Order_Date)) %>% 
+  filter(between(Order_Date, as.Date("2017-01-01"), as.Date("2017-12-31"))) %>% 
+  filter(!Region %in% c("Region 3", "Region 5", "Region 8")) %>% 
+  group_by(Customer_Segment , Product_Category) %>% 
+  summarise(mean_profit = mean(Sales))
+
+tab_3
+```
+
+Task 2
+
+```{r}
+
+```
