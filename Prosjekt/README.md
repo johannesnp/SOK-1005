@@ -8,4 +8,4 @@ For å kjøre "Oppgave 1.qmd", må datasettet fra Chicago Booth lastes ned. Jeg 
 Disse filene kan hentes her:
 https://www.chicagobooth.edu/research/kilts/datasets/dominicks.
 
-Oppgave 2-4 besvares i en egen qmd fil, og er eksportert til html med samme navn.
+Oppgave 2-4 besvares i en egen qmd fil, og er eksportert til html.
