@@ -5,10 +5,10 @@ editor: visual
 ---
 
 ```{r}
-rm(list=ls())
-library(tidyverse)
-library(haven)
-library(lubridate)
+rm(list=ls()) #fjrner tidligere innlastet data 
+library(tidyverse) #laster inn tidyverse
+library(haven) #laster inn haven
+library(lubridate) #laster inn lubridate
 ```
 
 ```{r}
@@ -22,23 +22,20 @@ category <- c("Analgesics","Bath Soap","Beer","Bottled Juices","Cereals",
 letter2number <- function(x) {utf8ToInt(x) - utf8ToInt("A") + 1L}
 seed_number <- sum(letter2number("Johannes"))
 set.seed(seed_number)
-sample(category, 1)
+sample(category, 1) #kjører koden som er fra oppgaven. Jeg er så heldig å få crackers som varekategori!
 ```
 
 ## Oppgave 1
 
 ```{r}
+# her hentes datasettene fra Chicago Booth. Disse må lastes ned på forhånd. 
+count <- read_dta("filens banenavn",encoding="latin1")
 
-# her hents datasettene fra Chicago Booth. Disse må lastes ned på forhånd. 
+demo <- read_dta("filens banenavn", encoding="latin1")
 
+UPC <- read.csv("filens banenavn")
 
-count <- read_dta("/Users/johannespedersen/Desktop/Skole/SOK-1005 Datavitenskap/Prosjektoppgave/data/ccount.dta",encoding="latin1")
-
-demo <- read_dta("/Users/johannespedersen/Desktop/Skole/SOK-1005 Datavitenskap/Prosjektoppgave/data/demo.dta", encoding="latin1")
-
-UPC <- read.csv("/Users/johannespedersen/Desktop/Skole/SOK-1005 Datavitenskap/Prosjektoppgave/data/upc.csv")
-
-move <- read.csv("/Users/johannespedersen/Desktop/Skole/SOK-1005 Datavitenskap/Prosjektoppgave/data/movement.csv")
+move <- read.csv("filens banenavn")
 
 ```
 
