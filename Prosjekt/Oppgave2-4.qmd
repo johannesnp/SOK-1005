@@ -1,0 +1,190 @@
+---
+title: "Prosjektoppgave SOK-1005"
+format: html
+editor: visual
+author: "40"
+execute:
+  echo: false
+---
+
+Dette dokumentet bruker data fra Dominicks datasett. Dette datasettet har blitt blitt ryddet og filtrert i Oppgave 1, som ligger i et eget dokument.
+
+```{r}
+rm(list=ls()) #fjerner tidligere innlastet data
+suppressPackageStartupMessages(library(tidyverse))# laster tidyverse uten startmeldinger
+suppressPackageStartupMessages(library(plotly)) # laster plotly for interaktive html plot, også uten startmeldinger
+suppressPackageStartupMessages(library(lubridate))# laster lubridate for omgjøring av dato, også uten startmeldinger
+library(leaflet)# laster leaflet for å illustrere kartfigur
+options(dplyr.summarise.inform = FALSE) #Avslår varsler når summarize funksjonen brukes
+```
+
+## Oppgave 2
+
+I denne oppgaven velger jeg å se nærmere på butikk 86. Datasettet brukt i denne salgsrapporten er hentet fra butikkjeden Dominicks. Salgsrapporten består av data for salg av kjeks i år 1990.
+
+For en ukentlig salgsrapport er det flere ulike punkter som kan gi et helhetlig bilde over hvordan bedriften presterer på en ukentlig basis. Eksempler på slike analyser kan være:
+
+Figur 1.1 viser hvordan hver av de fem ulike merkene presterer innenfor salg. Vi kan klart se at NAB og Salerno utgjør en stor andel av salget. I uke 19 kan vi se et stort hopp i antall solgte Salerno. Dette skyldes et kupongtilbud for kundene. Senere, kan vi se i uke 29 et hopp i antall solgte NAB. Dette kan skyldes at butikken utførte et "bonus buy" tilbud for kundene.
+
+```{r}
+df <- read_csv("https://raw.githubusercontent.com/johannesnp/SOK-1005/main/Prosjekt/df.csv",show_col_types = FALSE) #Henter ryddet datasett 
+```
+
+```{r}
+df_store86 <- df %>% 
+  filter(STORE == 86) #filtrer kun for butikk 86
+
+fig1 <- df_store86 %>%
+  group_by(BRAND) %>% #grupperer etter merke
+  ggplot(aes(x=WEEK, y=MOVE,fill=BRAND))+ #tegner plot
+  geom_bar(position = "stack", stat = "identity")+
+  theme_bw()+
+  ylab("Antall solgte produkter")+
+  xlab("Uke")+
+  ggtitle("Antall solgte produkter for butikk 86")+
+  labs(fill="Merke",
+       subtitle = "Figur 1.1")
+
+ggplotly(fig1) %>% #kaller plottet, bruker plotly for å gjøre den interaktiv i html filen
+  layout(title = list(text = paste0('Antall solgte produkter for butikk 86',
+                                    '<br>',
+                                    '<sup>',
+                                    'Figur 2.1',
+                                    '</sup>')))# bruker litt html for å vise en subtittel
+```
+
+Figur 1.2 viser hvordan butikkens bruttoinntekter har utviklet seg gjennom året. Figuren viser en kumulativ utvikling. NAB og Salerno er igjen ledende i denne figuren. Hvor vi tydelig kan se hvordan tilbudene har hatt en påvirkning på inntekten i uke 19 og 29. Kavali, FFV og Bremmer presterer ikke like godt derimot.
+
+Figuren gjør det lett å visualisere hvordan salg påvirker kundenes handlingsmønstre, samtidig som vi ser at inntekten holder seg stabilt for alle merker gjennom året
+
+```{r}
+fig2 <- df_store86 %>% 
+  group_by(BRAND) %>% #grupperer etter merke
+  mutate(cmsum = cumsum(SALES)) %>% #lager en kolonne med kumulative salg
+  ggplot(aes(x=WEEK,y=cmsum,color=BRAND))+ #tegner plot
+  geom_line()+
+  ylab("Kumulativ Inntekt i dollar")+
+  xlab("Uke")+
+  ggtitle("Kumulativ bruttoinntekt for butikk 86")
+  
+ggplotly(fig2) %>% #bruker plotly med subtittel
+  layout(title = list(text = paste0('Kumulativ bruttoinntekt for butikk 86'                                    ,'<br>',
+                                    '<sup>',
+                                    'Figur 2.2',
+                                    '</sup>')))
+```
+
+I figur 1.3 ser vi på hvordan den gjennomsnittlige profittmarginen er for hvert enkelt merke. Her ser vi at NAB og Salerno som er de to ledende merkene, er også de med lavest profittmarginer. De kan tåle en lavere profittmargin, med tanke på hvor mye de selger. Bremmer, Kavali og FFV har en høyere profitt margin per solgte produkt, men med tanke på deres lave salgstall, er ikke den totale profitten høy.
+
+For merkene Bremmer, Kavali og FFV, kan det være mulig å potensielt senke deres profittmargin for å bli mer konkurransedyktige mot andre merker som NAB og Salerno
+
+```{r}
+average_profit <- df_store86 %>% 
+  group_by(BRAND) %>% 
+  summarize_at(vars(PROFIT), list(name = mean))
+```
+
+```{r}
+fig3 <- average_profit %>% 
+  ggplot(aes(x=BRAND,y=name, fill=BRAND))+ #tegner plot
+  geom_bar(stat="identity", width=0.5, show.legend = FALSE)+
+  ylab("")+
+  xlab("")+
+  ggtitle("Gjennomsnittlig profittmargin for ulike merker")
+
+ggplotly(fig3) %>% #bruker plotly med subtittel
+  layout(title = list(text = paste0('Gjennomsnittlig profittmargin for ulike merker'                                    ,'<br>',
+                                    '<sup>',
+                                    'Figur 2.3',
+                                    '</sup>')))
+  
+```
+
+```{r}
+knitr::kable(average_profit,"pipe", col.names = c("Merke","Profittmargin"), align = c("c","c"))# lager en table for å vise profitmarginene
+```
+
+## Oppgave 3
+
+Her ser vi på utviklingen for alle butikkene for Dominicks kjeden.
+
+```{r}
+df_monthly <- df %>% 
+  mutate(DATE = parse_date_time(paste(1990, df$WEEK, 1, sep="/"),'Y/W/w')) %>% 
+  relocate("DATE", .before = "WEEK")#Lager en kolonne som date
+
+df_monthly$MONTH <- months(as.Date(df_monthly$DATE)) #Omgjør til date
+
+df_monthly <- df_monthly %>% 
+  relocate("MONTH", .before = "DATE")
+
+df_monthly <- df_monthly %>% 
+  group_by(BRAND,DAY = floor_date(DATE,'month')) %>% #grupperer etter merke,dato,og måned
+  summarize(TOT_MOVE = sum(MOVE), # lager kolonner med sum og gjennomsnitt av ulike verdier
+            AVG_SALES = mean(SALES),
+            AVG_PROFIT_MARGIN = mean(PROFIT),
+            TOT_SALES = sum(SALES),
+            AVG_PRICE = mean(PRICE))
+```
+
+I figur 3.1 ser vi den gjennomsnittlige profittmarginen per solgte produkt. Når merkene endrer på prisene for å holde seg mer konkurransedyktige, får dette konsekvenser for profitten deres. Vi ser at Salerno gradvis økte den gjennomsnittlige prisen på varene deres i perioden Januar-Mars, økte profitten deres. Samtidig ser vi også hvordan profitten til FFV og Kavali er uendret gjennom året. Dette kommer av at merkene holdt en lik pris gjennom hele 1990.
+
+```{r}
+df_monthly <- df_monthly %>% 
+  mutate(AVG_PROFIT_DOLLAR = AVG_PROFIT_MARGIN*(AVG_PRICE/100))# regner ut en gjennomsnittlig profitt i dollar
+
+ggplotly(df_monthly %>% 
+  group_by(BRAND) %>% #grupperer etter merke
+  mutate(cumprofit = cumsum(AVG_PROFIT_DOLLAR)) %>% #lager en kolonne med kumulativ profitt i dollar
+  ggplot(aes(x=DAY, y=AVG_PROFIT_DOLLAR,color=BRAND))+ #tegner plot
+  geom_line()+
+  geom_point()+
+  ggtitle("Gjennomsnittlig profitt per solgte produkt i dollar")) %>% 
+  layout(title = list(text = paste0('Gjennomsnittlig profitt per solgte produkt i dollar'                                    ,'<br>',
+                                    '<sup>',
+                                    'Figur 3.1',
+                                    '</sup>')))# lager en subtittel
+```
+
+FIgur 3.2 viser bruttoinntektene for alle butikkene i dollar. Her har vi en logaritmisk skala på y-aksen, for å kunne tydelig visualisere både toppmerkene og de på bunnen i samme figur. Vi ser her igjen at Salerno opplever et hopp i Mai, hvor kupongtilbudet tok sted. NAB og Salerno holder en forholdsvis stabil inntekt gjennom alle månedene. De resterende merkene er derimot mer sprikende, og opplever opp og nedganger.
+
+```{r}
+ggplotly(df_monthly %>% #lager plot direkte i ggplotly denne gangen
+           group_by(BRAND) %>% #grupperer etter merke
+           ggplot(aes(x=DAY,y=TOT_SALES,color=BRAND))+ #tegner plot
+           geom_line()+
+           geom_point()+
+           scale_y_continuous(trans='log10')+#bruker log skala på y-aksen
+           ggtitle("Totalt bruttointekter i dollar for alle butikker i 1990")+
+           ylab("Antall USD (Logaritmisk skala)")+ #y akse label
+           xlab("Tid")) %>% #x akse label
+  layout(title = list(text = paste0('Totalt bruttointekter i dollar for alle butikker i 1990'                                    ,'<br>',
+                                    '<sup>',
+                                    'Figur 3.2',
+                                    '</sup>')))#lager subtittel
+```
+
+## Oppgave 4
+
+For en videre utbygging av nye utsalg, kan der være verdt å se på hvilke butikker som selger godt, og har en stabil strøm med kunder. Her kan der være potensielle tomrom i markedet. Hvor det kan være mulig å få et større markedsandel.
+
+Nedenfor er kart med de nåværende butikkene i Dominicks kjeden som selger disse kjeksmerkene. Størrelsen på de ulike prikkene forteller om mengden på deres omsetting for 1990. Her ser vi at det er store avstander mellom hver av butikkene.
+
+```{r}
+map_df <- df %>% #lager map_df fra df
+  group_by(STORE) %>% #gruperer etter butikk
+  summarize(year_move = sum(MOVE)) %>% #lager year_move som summerer antall solge varer
+  left_join(df,map_df,by="STORE") %>% #setter sammen df og map_df med STORE som fellesnevner
+  mutate(long=long/-10000,lat=lat/10000)# omgjør koordinater til rett format
+
+leaflet() %>%#tegner kart
+  addTiles() %>%
+  addCircleMarkers(data = map_df, 
+                   lat = ~lat, 
+                   lng = ~long, 
+                   radius=~year_move/300)# legger til sirkel for hver butikk, hvor størrelsen avhenger av year_move/300. Må dele på 300 for at ikke sirklene blir for store.
+```
+
+## Kilder:
+
+Datasett brukt i denne analysen er hentet fra James M. Kilts Center, University of Chicago Booth School of Business. Dominicks datasett kan hentes her: <https://www.chicagobooth.edu/research/kilts/datasets/dominicks>

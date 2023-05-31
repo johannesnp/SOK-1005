@@ -1,0 +1,126 @@
+---
+title: "Prosjektoppgave"
+format: pdf
+editor: visual
+---
+
+```{r}
+rm(list=ls())
+library(tidyverse)
+library(haven)
+library(lubridate)
+```
+
+```{r}
+category <- c("Analgesics","Bath Soap","Beer","Bottled Juices","Cereals",
+              "Cheeses","Cigarettes","Cookies","Crackers","Canned Soup",
+              "Dish Detergent","Front-end-candies","Frozen Dinners","Frozen Entrees",
+              "Frozen Juices","Fabric Softeners","Grooming Products","Laundry Detergents",
+              "Oatmeal","Paper Towels","Soft Drinks","Shampoos","Snack Crackers",
+              "Soaps","Toothbrushes","Canned Tuna","Toothpastes","Bathroom Tissues")
+
+letter2number <- function(x) {utf8ToInt(x) - utf8ToInt("A") + 1L}
+seed_number <- sum(letter2number("Johannes"))
+set.seed(seed_number)
+sample(category, 1)
+```
+
+## Oppgave 1
+
+```{r}
+
+# her hents datasettene fra Chicago Booth. Disse må lastes ned på forhånd. 
+
+
+count <- read_dta("/Users/johannespedersen/Desktop/Skole/SOK-1005 Datavitenskap/Prosjektoppgave/data/ccount.dta",encoding="latin1")
+
+demo <- read_dta("/Users/johannespedersen/Desktop/Skole/SOK-1005 Datavitenskap/Prosjektoppgave/data/demo.dta", encoding="latin1")
+
+UPC <- read.csv("/Users/johannespedersen/Desktop/Skole/SOK-1005 Datavitenskap/Prosjektoppgave/data/upc.csv")
+
+move <- read.csv("/Users/johannespedersen/Desktop/Skole/SOK-1005 Datavitenskap/Prosjektoppgave/data/movement.csv")
+
+```
+
+```{r}
+UPC_move <- left_join(UPC,move,by='UPC') #Slår sammen UPC og move i UPC_move
+
+UPC_move <- UPC_move %>% #Filtrer for bare 1990 og move>0
+  filter(WEEK == (16:68)) %>% 
+  filter(MOVE>0)
+```
+
+Aggregate the customer count file to weekly data and merge this with the aggregated Movement file.
+
+```{r}
+count <- na.omit(count)# fjerner rader med NA
+
+count$date <- as.Date(count$date, format = "%y%m%d")# konverter til date
+
+count <- count %>% 
+  filter(between(date, as.Date("1990-01-01"),as.Date("1990-12-31"))) %>% 
+  relocate("week", .before="grocery") #filtrer vekk alt, uten om 1990 og flytter "week" kolonnen 
+
+colname <- c("grocery","dairy","frozen","bottle","mvpclub","groccoup","meat","meatfroz","meatcoup","fish","fishcoup","promo","promcoup","produce","bulk","saladbar","prodcoup","bulkcoup","salcoup","floral","florcoup","deli","deliself","deliexpr","convfood","cheese","delicoup","bakery","pharmacy","pharcoup","gm","jewelry","cosmetic","haba","gmcoup","camera","photofin","video","videoren","vidcoup","beer","wine","spirits","miscscp","mancoup","custcoun","ftgchin","ftgccoup","ftgital","ftgicoup","daircoup","frozcoup","habacoup","photcoup","cosmcoup","ssdelicp","bakcoup","liqcoup") #lager en liste over alle kolonnene
+
+
+count <- count %>% 
+  group_by(store,week) %>% 
+  summarize_at(colname,.funs = sum) #summerer kolonner etter "week" og "store"
+
+colnames(count)[1] <- "WEEK" #endrer week til WEEK
+colnames(count)[2] <- "STORE" #endrer store til STORE
+
+UPC <- UPC %>% 
+  select(-NITEM,-CASE,-COM_CODE) #fjerner kolonner
+
+move <- move %>% 
+  select(-OK,-PRICE_HEX,-PROFIT_HEX)#fjerner kolonner
+
+count_UPC_move <- left_join(UPC_move,count,by=c("WEEK","STORE")) #slår sammen count og UPC_move
+```
+
+```{r}
+colnames(demo)[8] <- "STORE" #endrer "store" kolonne til "STORE"
+
+demo <- demo %>% 
+  select(-gini) #fjerner gini kolonne
+
+df_mega <- left_join(count_UPC_move,demo,by=c("STORE")) #slår sammen ccount_upc_movement med demo, kaller denne for df_mega
+```
+
+Identify a brand name, e.g. "Acme" with many products (UPC's), like "Acme Light", "Acme Superior" etc. Merge all UPC's for this brand into one category. Identify four other brands with lots of movement data, and use these five "brands" in your subsequent analysis.
+
+```{r}
+brand <- paste(c("BREMMER", "NAB", "SALERNO", "FFV", "KAVALI","KAVLI"), collapse = "|") #velger merker
+
+df_brand <- df_mega %>% #starter med uke 1 istedet for 16
+  mutate(WEEK = WEEK-15) %>% 
+  filter(WEEK == (1:52)) #velger bare uker i 1990
+
+df_brand <- df_mega %>% 
+  filter(grepl(brand,DESCRIP)) #filtrer for bare valgte merker fra "brand"
+
+df_brand <- df_brand %>% 
+  mutate(BRAND = str_extract(DESCRIP, brand)) %>% #lager kolonne for merker
+  relocate("BRAND", .before = "SIZE") %>% 
+  mutate(SALES = PRICE*MOVE/QTY) %>% #kalkulerer total dollar salg
+  relocate("SALES", .before = "PRICE")
+
+df_brand$BRAND[df_brand$BRAND == 'KAVLI'] <- 'KAVALI' #remaning
+```
+
+```{r}
+#df_brand <- df_brand %>% #naming every week from 1-52
+#  mutate(WEEK = WEEK-15) %>% 
+#  subset(WEEK<53)
+
+df_brand <- df_brand[,-131:-584]
+df_brand <- df_brand[,-83:-85]
+df_brand <- df_brand[,-16:-77]
+df_brand <- subset(df_brand, select = c(-COM_CODE,-SIZE,-SIZE,-QTY,-CASE,-NITEM)) #fjerner kolonner som ikke trengs
+
+
+write.csv(df_brand,"/Users/johannespedersen/Desktop/Skole/SOK-1005 Datavitenskap/Prosjektoppgave/df.csv", row.names=FALSE) 
+#eksporterer det ferdige datasettet. Denne ligger på github og brukes videre i de neste oppgavene
+```
