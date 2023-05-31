@@ -9,4 +9,4 @@ Jeg har lagt alle filene i en zip fil slik at det er enkelt å laste ned: [ZIP f
 
 Filene kan også hentes her: [Chicago Booth](https://www.chicagobooth.edu/research/kilts/datasets/dominicks)
 
-Oppgave 2-4 besvares i en egen qmd fil, og er eksportert til egen html fil.
+Oppgave 2-4 besvares i en egen qmd fil og bruker df.csv for å hente ryddet data. Alt er så eksportert til egen html fil.
